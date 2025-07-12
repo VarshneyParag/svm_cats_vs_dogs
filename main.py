@@ -1,54 +1,58 @@
-from flask import Flask, request, render_template
 import os
+import zipfile
 import cv2
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report
 import joblib
 
-app = Flask(__name__)
+# ========== STEP 1: UNZIP DATASET ==========
+def unzip_dataset(zip_file='dataset_small.zip', extract_dir='dataset_small'):
+    if not os.path.exists(extract_dir):
+        print("🔓 Unzipping dataset...")
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+        print("✅ Dataset extracted to:", extract_dir)
+    else:
+        print("📁 Dataset already extracted.")
 
-# Load the model
-try:
-    model = joblib.load("svm_model.pkl")
-    print("✅ Model loaded successfully.")
-except Exception as e:
-    print("❌ Error loading model:", e)
-    model = None
+# Call unzip
+unzip_dataset()
 
-# Preprocess image
-def preprocess_image(img_path):
-    try:
-        img = cv2.imread(img_path)
-        img = cv2.resize(img, (64, 64))
-        return img.flatten().reshape(1, -1)
-    except Exception as e:
-        print("❌ Error preprocessing image:", e)
-        return None
+# ========== STEP 2: LOAD IMAGES ==========
+def load_data(folder_path, img_size=64):
+    X, y = [], []
+    for file in os.listdir(folder_path):
+        if file.endswith(".jpg"):
+            label = 0 if "cat" in file.lower() else 1
+            img_path = os.path.join(folder_path, file)
+            img = cv2.imread(img_path)
+            if img is not None:
+                img = cv2.resize(img, (img_size, img_size))
+                X.append(img.flatten())
+                y.append(label)
+    return np.array(X), np.array(y)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Define dataset path
+dataset_path = "dataset_small/train"
+print("📥 Loading image data...")
+X, y = load_data(dataset_path)
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    if model is None:
-        return "❌ Model not loaded. Please check logs."
+# ========== STEP 3: TRAIN MODEL ==========
+print("📊 Splitting dataset...")
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    file = request.files.get('image')
-    if not file:
-        return "❌ No image uploaded."
+print("🤖 Training SVM model...")
+svm_model = SVC(kernel='linear')
+svm_model.fit(X_train, y_train)
 
-    # Save image to static folder
-    filepath = os.path.join('static', file.filename)
-    file.save(filepath)
+# ========== STEP 4: SAVE MODEL ==========
+joblib.dump(svm_model, "svm_model.pkl")
+print("✅ Model saved as 'svm_model.pkl'")
 
-    img_data = preprocess_image(filepath)
-    if img_data is None:
-        return "❌ Image processing failed."
-
-    pred = model.predict(img_data)[0]
-    label = "Dog 🐶" if pred == 1 else "Cat 🐱"
-
-    return render_template('result.html', label=label, image=file.filename)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+# ========== STEP 5: EVALUATE ==========
+print("🧪 Evaluating model...")
+y_pred = svm_model.predict(X_test)
+print("🎯 Accuracy:", accuracy_score(y_test, y_pred))
+print("\n📋 Classification Report:\n", classification_report(y_test, y_pred, target_names=["Cat", "Dog"]))
