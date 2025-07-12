@@ -1,1 +1,9 @@
+# Train SVM
+from sklearn.svm import SVC
+model = SVC(kernel='linear')
+model.fit(X_train, y_train)
+
+# Save it
+import joblib
+joblib.dump(model, "svm_model.pkl")
 
