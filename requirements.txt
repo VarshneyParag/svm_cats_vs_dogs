@@ -1,4 +1,4 @@
-numpy
+flask
 opencv-python
 scikit-learn
 joblib
