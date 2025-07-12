@@ -1,8 +1,8 @@
 from flask import Flask, request, render_template
+import os
 import cv2
 import numpy as np
 import joblib
-import os
 
 app = Flask(__name__)
 model = joblib.load("svm_model.pkl")
@@ -22,6 +22,12 @@ def predict():
         return "No file uploaded"
 
     file = request.files['image']
+    if file.filename == '':
+        return "No file selected"
+
+    if not os.path.exists("static"):
+        os.makedirs("static")
+
     filepath = os.path.join("static", file.filename)
     file.save(filepath)
 
