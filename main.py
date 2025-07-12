@@ -1,46 +1,35 @@
-import os
+from flask import Flask, request, render_template
 import cv2
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC
-from sklearn.metrics import classification_report, accuracy_score
 import joblib
+import os
 
-# Load images and labels
-def load_data(folder_path, img_size=64):
-    X, y = [], []
-    for file in os.listdir(folder_path):
-        if file.endswith(".jpg"):
-            label = 0 if "cat" in file else 1
-            img_path = os.path.join(folder_path, file)
-            img = cv2.imread(img_path)
-            img = cv2.resize(img, (img_size, img_size))
-            X.append(img.flatten())
-            y.append(label)
-    return np.array(X), np.array(y)
+app = Flask(__name__)
+model = joblib.load("svm_model.pkl")
 
-# Set paths and parameters
-DATASET_PATH = "dataset/train"
-IMAGE_SIZE = 64
+def preprocess_image(img_path):
+    img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+    img = cv2.resize(img, (64, 64))
+    return img.flatten().reshape(1, -1)
 
-print("Loading data...")
-X, y = load_data(DATASET_PATH, IMAGE_SIZE)
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-print(f"Data loaded: {X.shape[0]} samples")
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'image' not in request.files:
+        return "No file uploaded"
 
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    file = request.files['image']
+    filepath = os.path.join("static", file.filename)
+    file.save(filepath)
 
-# Train SVM model
-print("Training SVM...")
-svm = SVC(kernel='linear')
-svm.fit(X_train, y_train)
+    img_data = preprocess_image(filepath)
+    prediction = model.predict(img_data)
+    label = "Dog" if prediction[0] == 1 else "Cat"
 
-# Save model
-joblib.dump(svm, "svm_model.pkl")
-print("Model saved as svm_model.pkl")
+    return render_template('result.html', label=label, image=file.filename)
 
-# Evaluate
-y_pred = svm.predict(X_test)
-print("Accuracy:", accuracy_score(y_test, y_pred))
-print(classification_report(y_test, y_pred, target_names=["Cat", "Dog"]))
+if __name__ == "__main__":
+    app.run(debug=True)
