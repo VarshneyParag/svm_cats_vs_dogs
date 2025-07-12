@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prediction Result</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-green-50 min-h-screen flex items-center justify-center">
+  <div class="bg-white p-10 shadow-xl rounded-xl w-full max-w-md text-center">
+    <h2 class="text-2xl font-bold text-green-600 mb-4">Prediction Result</h2>
+    <img src="/static/{{ image }}" alt="Uploaded Image" class="w-64 h-64 object-cover rounded-lg mx-auto mb-4 border border-gray-200">
+    <p class="text-lg font-semibold">🧠 It's a <span class="text-blue-600">{{ label }}</span>!</p>
+    <a href="/" class="mt-6 inline-block bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">
+      Try Another Image
+    </a>
+  </div>
+</body>
+</html>
